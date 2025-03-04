@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contador de Likes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0);
+            color: white;
+        }
+        .counter {
+            font-size: 3rem;
+            font-weight: bold;
+        }
+        .goal {
+            font-size: 1.5rem;
+            margin-top: 10px;
+        }
+        .progress-bar {
+            width: 300px;
+            height: 20px;
+            background: #444;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px auto;
+            position: relative;
+        }
+        .progress {
+            height: 100%;
+            width: 0%;
+            background: limegreen;
+            transition: width 1s ease-in-out;
+        }
+        .celebration {
+            display: none;
+            font-size: 2rem;
+            color: gold;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <h1>👍 Likes da Live</h1>
+    <div class="counter" id="likeCount">0</div>
+    <div class="goal">Meta: <span id="goalCount">100</span> likes</div>
+    
+    <div class="progress-bar">
+        <div class="progress" id="progressBar"></div>
+    </div>
+    
+    <div class="celebration" id="celebration">🎉 META ALCANÇADA! 🎉</div>
+
+    <audio id="celebrationSound" src="https://www.myinstants.com/media/sounds/tudum.mp3"></audio>
+
+    <script>
+        const API_KEY = 'AIzaSyBzcMhNGLiemHVFynlUuqFRM4S-7F96E-o';
+        const VIDEO_ID = 'n22s22sz82U';
+        const STREAM_ELEMENTS_WEBHOOK = 'URL_DO_WEBHOOK_DO_STREAMELEMENTS';
+
+        let currentLikes = 0;
+        let goal = 100;  
+        let increment = 100;  
+
+        async function fetchLikes() {
+            try {
+                let response = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${VIDEO_ID}&key=${API_KEY}`);
+                let data = await response.json();
+                
+                if (data.items.length > 0) {
+                    currentLikes = parseInt(data.items[0].statistics.likeCount);
+                    document.getElementById('likeCount').textContent = currentLikes;
+                    updateProgress();
+                    checkGoal();
+                }
+            } catch (error) {
+                console.error('Erro ao buscar os likes:', error);
+            }
+        }
+
+        function updateProgress() {
+            let progress = Math.min((currentLikes / goal) * 100, 100);
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        function checkGoal() {
+            if (currentLikes >= goal) {
+                document.getElementById('celebration').style.display = 'block';
+                document.getElementById('celebrationSound').play();
+                sendToStreamElements(`🎉 Batemos a meta de ${goal} likes! Nova meta: ${goal + increment} likes! 🚀`);
+                
+                setTimeout(() => {
+                    document.getElementById('celebration').style.display = 'none';
+                }, 5000);
+
+                goal += increment;
+                document.getElementById('goalCount').textContent = goal;
+            }
+        }
+
+        async function sendToStreamElements(message) {
+            try {
+                await fetch(STREAM_ELEMENTS_WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: message })
+                });
+            } catch (error) {
+                console.error('Erro ao enviar mensagem para o StreamElements:', error);
+            }
+        }
+
+        setInterval(fetchLikes, 10000);
+        fetchLikes();
+    </script>
+</body>
+</html>
